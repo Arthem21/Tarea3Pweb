@@ -1,0 +1,70 @@
+﻿@page "/"
+@inject NavigationManager NavMan
+@inject IJSRuntime jsx
+@using System.Text.Json
+
+<div class="container mt-5">
+    <h2 class="text-center mb-4">Estadísticas Generales</h2>
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card text-black bg-white shadow mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Total de Casos Registrados</h5>
+                    <p class="card-text display-5">@reportes.Count</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-black shadow mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Número de Muertos</h5>
+                    <p class="card-text display-5">@reportes.Sum(r => r.muertos)</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card text-black bg-white shadow mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Número de Heridos</h5>
+                    <p class="card-text display-5">@reportes.Sum(r => r.heridos)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card text-white bg-black shadow mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Cantidad de Vehículos</h5>
+                    <p class="card-text display-5">@reportes.Sum(r => r.vehiculos)</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-9">
+            <div class="card text-black bg-white shadow mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Costo Estimado</h5>
+                    <p class="card-text display-5"><Dinero valor="@reportes.Sum(r => r.costo)"/></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code{
+
+    private List<Registro> reportes = new List<Registro>();
+     protected override async Task OnInitializedAsync() {
+        var reportesJson = await jsx.InvokeAsync<string>("localStorage.getItem", "reportes");
+        if (!string.IsNullOrEmpty(reportesJson)) {
+            reportes = JsonSerializer.Deserialize<List<Registro>>(reportesJson);
+            
+            StateHasChanged();
+        }
+
+
+    }
+
+}
+
+

@@ -1,0 +1,94 @@
+﻿@page "/reporte"
+@inject NavigationManager NavMan
+@inject IJSRuntime jsx
+@using System.Text.Json
+
+<PageTitle>Reporte</PageTitle>
+
+<h1>Reporte</h1>
+
+<div class="text-end mb-3">
+    <button class="btn btn-primary" @onclick="nuevoReporte">Nuevo reporte</button>
+</div>
+
+<table class="table table-striped table-bordered">
+    <thead>
+        <tr>
+            <th>Fecha</th>
+            <th>Descripción</th>
+            <th>Costo estimado</th>
+            <th>Número de muertos</th>
+            <th>Número de heridos</th>
+            <th>Cantidad de vehículos</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach(var registro in reportes) {
+            <tr>
+                <td>@registro.fecha</td>
+                <td>@((@registro.descripcion.Length > 15) ? @registro.descripcion.Substring(0, 15) + "..." : @registro.descripcion)</td>
+                <td><Dinero valor="registro.costo"/></td>
+                <td>@registro.muertos</td>
+                <td>@registro.heridos</td>
+                <td>@registro.vehiculos</td>
+                <td>
+                    <button @onclick="() => editar(registro)" class="btn btn-primary btn-sm mb-3">Editar</button>
+                    <button @onclick="() => borrar(registro)" class="btn btn-danger btn-sm mb-3">Borrar</button>
+                    <button @onclick="() => imprimir(registro)" class="btn btn-success btn-sm mb-3">Imprimir</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<Registro> reportes = new List<Registro>();
+
+    void nuevoReporte() {
+        NavMan.NavigateTo("/reporte/nuevo");
+    }
+
+    void editar(Registro x) {
+        NavMan.NavigateTo($"/reporte/editar/{x.ID}");
+    }
+
+    private async Task imprimir(Registro x)
+{
+    if (x != null)
+    {
+        var reportesJson = await jsx.InvokeAsync<string>("localStorage.getItem", "reportes");
+        
+        List<Registro> reportes = string.IsNullOrEmpty(reportesJson)
+            ? new List<Registro>()
+            : JsonSerializer.Deserialize<List<Registro>>(reportesJson) ?? new List<Registro>();
+
+        reportes.RemoveAll(r => r.ID == x.ID); 
+        reportes.Add(x); 
+        
+        jsx.InvokeVoidAsync("localStorage.setItem", "reportes", JsonSerializer.Serialize(reportes));
+
+        jsx.InvokeVoidAsync("window.open", "reporte/imprimir/" + x.ID, "_blank");
+    }
+    else
+    {
+        Console.Error.WriteLine("El registro proporcionado es nulo.");
+    }
+}
+
+    private async Task borrar(Registro x) {
+        var confirmacion = await jsx.InvokeAsync<bool>("confirm", "¿Está seguro de eliminar el registro?");
+        if (confirmacion) {
+            reportes.Remove(x);
+            await jsx.InvokeVoidAsync("localStorage.setItem", "reportes", JsonSerializer.Serialize(reportes));
+            StateHasChanged();
+        }
+    }
+
+    protected override async Task OnInitializedAsync() {
+        var reportesJson = await jsx.InvokeAsync<string>("localStorage.getItem", "reportes");
+        if (!string.IsNullOrEmpty(reportesJson)) {
+            reportes = JsonSerializer.Deserialize<List<Registro>>(reportesJson);
+        }
+    }
+}

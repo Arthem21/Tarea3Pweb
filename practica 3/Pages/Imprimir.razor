@@ -1,0 +1,64 @@
+@page "/reporte/imprimir/{ID}"
+@inject NavigationManager NavMan
+@inject IJSRuntime jsx
+@using System.Text.Json
+@layout PrintLayout
+
+<h1 class="titulo">Reporte de caso</h1>
+
+@if (reporte != null)
+{
+    <div class="mb-3"><b>Fecha: </b>@reporte.fecha.ToShortDateString()</div>
+    <div class="mb-3"><b>Descripción: </b>@reporte.descripcion</div>
+    <div class="mb-3"><b>Costo estimado: </b><Dinero valor="reporte.costo"/></div>
+    <div class="mb-3"><b>Número de muertos: </b>@reporte.muertos</div>
+    <div class="mb-3"><b>Número de heridos: </b>@reporte.heridos</div>
+    <div class="mb-3"><b>Cantidad de vehículos: </b>@reporte.vehiculos</div>
+}
+else
+{
+    <div>Cargando reporte...</div>
+}
+
+@code {
+    [Parameter]
+    public string? ID { get; set; }
+
+    private Registro? reporte;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        if (firstRender) {
+            try
+            {
+                var reportesJson = await jsx.InvokeAsync<string>("localStorage.getItem", "reportes");
+                if (!string.IsNullOrEmpty(reportesJson))
+                {
+                    var reportes = JsonSerializer.Deserialize<List<Registro>>(reportesJson);
+                    if (reportes != null)
+                    {
+                        reporte = reportes.FirstOrDefault(x => x.ID == ID);
+                    }
+                }
+
+                if (reporte == null)
+                {
+                    await jsx.InvokeVoidAsync("alert", "No se encuentra el registro");
+                    NavMan.NavigateTo("/reporte");
+                }
+                else
+                {
+                    StateHasChanged();
+                    await jsx.InvokeVoidAsync("window.print");
+                    await jsx.InvokeVoidAsync("window.close");
+                }
+            }
+            catch (Exception ex)
+            {
+                
+                Console.Error.WriteLine($"Error: {ex.Message}");
+                await jsx.InvokeVoidAsync("alert", "Ocurrió un error al cargar el reporte.");
+                NavMan.NavigateTo("/reporte");
+            }
+        }
+    }
+}
